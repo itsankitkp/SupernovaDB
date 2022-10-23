@@ -1,6 +1,6 @@
 %option noyywrap nodefault yylineno case-insensitive
 %{
-#include "ssql.tab.h"
+#include "ssql_gram.tab.h"
 #include <stdarg.h>
 #include <string.h>
 void yyerror(char *s, ...);
@@ -15,9 +15,6 @@ ADD { return ADD; }
 ALL { return ALL; }
 ALTER { return ALTER; }
 ANALYZE { return ANALYZE; }
-/* Hack for BETWEEN ... AND ...
-* return special AND token if BETWEEN seen
-*/
 <BTWMODE>AND { BEGIN INITIAL; return AND; }
 AND { return ANDOP; }
 ANY { return ANY; }
@@ -253,11 +250,11 @@ FALSE { yylval.intval = 0; return BOOL; }
 \"(\\.|[^"\n])*$ { yyerror("Unterminated string %s", yytext); }
  /* hex strings */
 X'[0-9A-F]+' |
-0X[0-9A-F]+ { yylval.strval = strdup(yytext); return STRING
+0X[0-9A-F]+ { yylval.strval = strdup(yytext); return STRING; }
 
  /* bit strings */
 0B[01]+ |
-B'[01]+' { yylval.strval = strdup(yytext); return STRING
+B'[01]+' { yylval.strval = strdup(yytext); return STRING; }
 
  /* operators */
 [-+&~|^/%*(),.;!] { return yytext[0]; }
@@ -275,7 +272,7 @@ B'[01]+' { yylval.strval = strdup(yytext); return STRING
 ">>" { yylval.subtok = 2; return SHIFT; }
 ":=" { return ASSIGN; }
 
-/* functions */
+
 SUBSTR(ING)?/"(" { return FSUBSTRING; }
 TRIM/"(" { return FTRIM; }
 DATE_ADD/"(" { return FDATE_ADD; }
@@ -293,7 +290,7 @@ COUNT { int c = input(); unput(c);
  return NAME; }
 `[^`\n]*$ { yyerror("unterminated quoted name %s", yytext); }
 
-/* user variables */
+
 @[0-9a-z_.$]+ |
 @\"[^"\n]+\" |
 @`[^`\n]+` |
@@ -302,7 +299,7 @@ COUNT { int c = input(); unput(c);
 @`[^`\n]*$ |
 @'[^'\n]*$ { yyerror("unterminated quoted user variable %s", yytext); }
 
-/* comments */
+
 #.* ;
 "--"[ \t].* ;
 "/*" { oldstate = YY_START; BEGIN COMMENT; }
